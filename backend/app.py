@@ -1,7 +1,9 @@
 from flask import Flask, request, jsonify, render_template
 import joblib
 import numpy as np
+import pandas as pd
 from flask_cors import CORS
+import os
 
 app = Flask(__name__)
 CORS(app)
@@ -10,6 +12,9 @@ CORS(app)
 model = joblib.load("model/loan_model.pkl")
 scaler = joblib.load("model/scaler.pkl")
 selector = joblib.load("model/selector.pkl")
+
+# Get feature names from scaler (important for production)
+feature_names = scaler.feature_names_in_
 
 # Home route (serves frontend)
 @app.route("/")
@@ -22,10 +27,11 @@ def predict():
     try:
         data = request.json["features"]
 
-        features = np.array(data).reshape(1, -1)
+        # Convert to DataFrame with correct column names
+        features_df = pd.DataFrame([data], columns=feature_names)
 
-        # Apply same preprocessing steps
-        features_scaled = scaler.transform(features)
+        # Apply preprocessing
+        features_scaled = scaler.transform(features_df)
         features_selected = selector.transform(features_scaled)
 
         prediction = model.predict(features_selected)[0]
@@ -39,10 +45,6 @@ def predict():
     except Exception as e:
         return jsonify({"error": str(e)})
 
-if __name__ == "__main__":
-    app.run(debug=True)
-    
-    import os
-
+# Production run
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
