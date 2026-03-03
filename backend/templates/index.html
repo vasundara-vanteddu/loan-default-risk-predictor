@@ -17,10 +17,10 @@ AI Loan Risk Assessment
 <div class="grid grid-cols-2 gap-4">
 
 <input id="limit" type="number" placeholder="Credit Limit"
-class="border p-3 rounded-lg">
+class="border p-3 rounded-lg" required>
 
 <input id="age" type="number" placeholder="Age"
-class="border p-3 rounded-lg">
+class="border p-3 rounded-lg" required>
 
 <select id="sex" class="border p-3 rounded-lg">
 <option value="1">Male</option>
@@ -39,7 +39,7 @@ class="border p-3 rounded-lg">
 </select>
 
 <input id="pay0" type="number" placeholder="Last Month Payment Status"
-class="border p-3 rounded-lg">
+class="border p-3 rounded-lg" required>
 
 </div>
 
@@ -78,6 +78,12 @@ let edu = Number(document.getElementById("education").value);
 let marriage = Number(document.getElementById("marriage").value);
 let pay0 = Number(document.getElementById("pay0").value);
 
+// Basic validation
+if(!limit || !age || pay0 === null || pay0 === ""){
+    alert("Please fill all required fields.");
+    return;
+}
+
 let features = [
 limit, sex, edu, marriage, age,
 pay0,0,0,0,0,0,
@@ -85,18 +91,27 @@ pay0,0,0,0,0,0,
 500,500,500,500,500,500
 ];
 
-const response = await fetch("/predict",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({features:features})
+const response = await fetch("/predict", {
+method: "POST",
+headers: { "Content-Type": "application/json" },
+body: JSON.stringify({ features: features })
 });
 
+if(!response.ok){
+    throw new Error("Server error");
+}
+
 const data = await response.json();
+
+if(data.error){
+    throw new Error(data.error);
+}
 
 let result = document.getElementById("result");
 let suggestion = document.getElementById("suggestion");
 let riskBar = document.getElementById("riskBar");
 let riskPercent = document.getElementById("riskPercent");
+let explanation = document.getElementById("explanation");
 
 let probValue = data.default_probability;
 let percent = Math.round(probValue * 100);
@@ -122,7 +137,6 @@ else{
     suggestion.innerText =
     "High risk detected. Reduce outstanding balances and avoid payment delays.";
 }
-let explanation = document.getElementById("explanation");
 
 if(pay0 > 1){
     explanation.innerText =
@@ -138,10 +152,12 @@ else{
 }
 
 } catch(error){
-    console.log(error);
-    alert("Prediction failed. Check backend.");
+    console.error(error);
+    alert("Prediction failed. Backend error occurred.");
 }
+
 }
 </script>
+
 </body>
 </html>
